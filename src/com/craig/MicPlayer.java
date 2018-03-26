@@ -1,12 +1,14 @@
 package com.craig;
 
 import javax.sound.sampled.*;
+import java.io.IOException;
 import java.net.*;
 
 public class MicPlayer {
 
 
-    private static final String IP_TO_STREAM_TO = "3.39.48.168";
+    private static final String IP_TO_STREAM_TO = "127.0.0.1";
+//    private static final String IP_TO_STREAM_TO = "3.39.48.168";
     private static final int PORT_TO_STREAM_TO = 8888;
     private static DatagramSocket sock;
     private static final byte[] tempBuffer = new byte[1000];
@@ -35,53 +37,44 @@ public class MicPlayer {
 
 
         if (AudioSystem.isLineSupported(Port.Info.MICROPHONE)) {
+            DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, DefaultFormat.getAudioFormat());
+            TargetDataLine targetDataLine = null;
             try {
-
-
-                DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, getAudioFormat());
-                TargetDataLine targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
-                targetDataLine.open(getAudioFormat());
-                targetDataLine.start();
-                int cnt = 0;
-                packet = getPacket(tempBuffer);
-                while (true) {
-                    targetDataLine.read(tempBuffer, 0, tempBuffer.length);
-                    sendThruUDP(tempBuffer);
+                targetDataLine = (TargetDataLine) AudioSystem.getLine(dataLineInfo);
+                targetDataLine.open(DefaultFormat.getAudioFormat());
+            }
+            catch (LineUnavailableException e) { handleCriticalError(e); }
+            targetDataLine.start();
+            try { packet = getPacket(tempBuffer); }
+            catch (UnknownHostException e)  { handleCriticalError(e); }
+            while (true) {
+                targetDataLine.read(tempBuffer, 0, tempBuffer.length);
+                if(! sendThruUDP(tempBuffer)) {
+                    System.err.println("Could not send packet via UDP.");
+                    break;
                 }
-
-            } catch (Exception e) {
-                System.out.println(" not correct ");
-                System.exit(0);
             }
         }
 
         sock.close();
     }
 
-    public static AudioFormat getAudioFormat() {
-        float sampleRate = 8000.0F;
-        //8000,11025,16000,22050,44100
-        int sampleSizeInBits = 16;
-        //8,16
-        int channels = 1;
-        //1,2
-        boolean signed = true;
-        //true,false
-        boolean bigEndian = false;
-        //true,false
-        return new AudioFormat(sampleRate, sampleSizeInBits, channels, signed, bigEndian);
+    private static void handleCriticalError(Throwable e) {
+        System.err.println("Critical error " + e.getMessage());
+        e.printStackTrace();
+        System.exit(1);
     }
 
-    public static void sendThruUDP(byte soundpacket[]) {
-        try {
-            packet.setData(soundpacket);
-            packet.setLength(soundpacket.length);
-            sock.send(packet);
-        } catch (Exception e) {
+    public static boolean sendThruUDP(byte[] soundpacket) {
+        packet.setData(soundpacket);
+        packet.setLength(soundpacket.length);
+        try { sock.send(packet); }
+        catch (IOException e) {
+            System.err.println("IOException: " + e);
             e.printStackTrace();
-            System.out.println(" Unable to send soundpacket using UDP ");
+            return false;
         }
-
+        return true;
     }
 
     private static DatagramPacket getPacket(byte[] soundpacket) throws UnknownHostException {
