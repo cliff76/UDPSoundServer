@@ -1,7 +1,12 @@
 package com.craig;
 
-import javax.sound.sampled.*;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
 import java.net.*;
+
+import static com.craig.DefaultFormat.getAudioFormat;
 
 public class UDPAudioReceiver extends Thread {
 
@@ -97,22 +102,5 @@ public class UDPAudioReceiver extends Thread {
         }
 
     }
-
-
-    public static AudioFormat getAudioFormat()
-    {
-        float sampleRate = 8000.0F;
-        //8000,11025,16000,22050,44100
-        int sampleSizeInBits = 16;
-        //8,16
-        int channels = 1;
-        //1,2
-        boolean signed = true;
-        //true,false
-        boolean bigEndian = false;
-        //true,false
-        return new AudioFormat( sampleRate, sampleSizeInBits, channels, signed, bigEndian );
-    }
-
 
 }
